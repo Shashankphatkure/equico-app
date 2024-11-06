@@ -1,0 +1,182 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String
+  dateOfBirth   DateTime
+  isOver18      Boolean   @default(false)
+  profileImage  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  posts         Post[]
+  comments      Comment[]
+  likes         Like[]
+  horses        Horse[]
+  events        Event[]
+  messages      Message[]
+  tacksForSale  TackShop[]
+  followers   Follow[]  @relation("followers")
+  following   Follow[]  @relation("following")
+  sentMessages     Message[] @relation("sentMessages")
+  receivedMessages Message[] @relation("receivedMessages")
+  savedListings    SavedListing[]
+}
+
+model Horse {
+  id          String    @id @default(cuid())
+  name        String
+  breed       String
+  color       String
+  owner       User      @relation(fields: [ownerId], references: [id])
+  ownerId     String
+  medicalRecords MedicalRecord[]
+  trainingLogs   TrainingLog[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Post {
+  id          String    @id @default(cuid())
+  content     String
+  imageUrl    String?
+  videoUrl    String?
+  author      User      @relation(fields: [authorId], references: [id])
+  authorId    String
+  likes       Like[]
+  comments    Comment[]
+  horse       Horse?    @relation(fields: [horseId], references: [id])
+  horseId     String?
+  isPublic    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model MedicalRecord {
+  id          String    @id @default(cuid())
+  horse       Horse     @relation(fields: [horseId], references: [id])
+  horseId     String
+  type        String    // vaccination, injury, checkup, etc.
+  date        DateTime
+  description String
+  veterinarian String?
+  documents   String?   // URL to uploaded documents
+  cost        Float?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Appointment {
+  id          String    @id @default(cuid())
+  horse       Horse     @relation(fields: [horseId], references: [id])
+  horseId     String
+  type        String    // vet, farrier, training, etc.
+  date        DateTime
+  provider    String    // name of vet, farrier, trainer
+  status      String    @default("scheduled") // scheduled, completed, cancelled
+  notes       String?
+  reminder    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Comment {
+  id        String    @id @default(cuid())
+  content   String
+  author    User      @relation(fields: [authorId], references: [id])
+  authorId  String
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String
+  likes     Like[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Like {
+  id        String    @id @default(cuid())
+  user      User      @relation(fields: [userId], references: [id])
+  userId    String
+  post      Post?     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String?
+  comment   Comment?  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  commentId String?
+  createdAt DateTime  @default(now())
+
+  @@unique([userId, postId])
+  @@unique([userId, commentId])
+}
+
+model Follow {
+  id          String    @id @default(cuid())
+  follower    User      @relation("following", fields: [followerId], references: [id])
+  followerId  String
+  following   User      @relation("followers", fields: [followingId], references: [id])
+  followingId String
+  createdAt   DateTime  @default(now())
+
+  @@unique([followerId, followingId])
+}
+
+model TackShop {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  owner       User      @relation(fields: [ownerId], references: [id])
+  ownerId     String
+  isVerified  Boolean   @default(false)
+  isPremium   Boolean   @default(false)
+  listings    Listing[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Listing {
+  id          String    @id @default(cuid())
+  title       String
+  description String
+  price       Float
+  condition   String    // new, like-new, used, etc.
+  category    String    // saddles, bridles, riding-wear, etc.
+  images      String[]  // Array of image URLs
+  status      String    @default("active") // active, sold, archived
+  shop        TackShop  @relation(fields: [shopId], references: [id])
+  shopId      String
+  isBoosted   Boolean   @default(false)
+  views       Int       @default(0)
+  savedBy     SavedListing[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model SavedListing {
+  id        String    @id @default(cuid())
+  user      User      @relation(fields: [userId], references: [id])
+  userId    String
+  listing   Listing   @relation(fields: [listingId], references: [id])
+  listingId String
+  createdAt DateTime  @default(now())
+
+  @@unique([userId, listingId])
+}
+
+model Message {
+  id        String    @id @default(cuid())
+  content   String
+  sender    User      @relation("sentMessages", fields: [senderId], references: [id])
+  senderId  String
+  receiver  User      @relation("receivedMessages", fields: [receiverId], references: [id])
+  receiverId String
+  listing   Listing?  @relation(fields: [listingId], references: [id])
+  listingId String?
+  isRead    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+}
