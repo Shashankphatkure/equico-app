@@ -9,48 +9,69 @@ export async function POST(req) {
 
     const user = await prisma.user.findUnique({
       where: { email },
+      select: {
+        id: true,
+        email: true,
+        password: true,
+        name: true,
+        isOver18: true,
+      },
     });
 
     if (!user) {
       return NextResponse.json(
-        { error: "Invalid credentials" },
+        { success: false, error: "Invalid credentials" },
         { status: 401 }
       );
     }
 
-    const isValid = await compare(password, user.password);
+    const isPasswordValid = await compare(password, user.password);
 
-    if (!isValid) {
+    if (!isPasswordValid) {
       return NextResponse.json(
-        { error: "Invalid credentials" },
+        { success: false, error: "Invalid credentials" },
         { status: 401 }
       );
     }
 
-    // Create JWT token
-    const token = sign({ userId: user.id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
-    });
+    const token = sign(
+      { userId: user.id, email: user.email },
+      process.env.JWT_SECRET || "default-secret-key",
+      { expiresIn: "7d" }
+    );
 
-    const response = NextResponse.json({
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        isOver18: user.isOver18,
+    // Create response with redirect URL
+    const response = NextResponse.json(
+      {
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          isOver18: user.isOver18,
+        },
+        redirectUrl: "/dashboard",
       },
-    });
+      { status: 200 }
+    );
 
-    // Set HTTP-only cookie
-    response.cookies.set("token", token, {
+    // Set cookie with proper configuration
+    response.cookies.set({
+      name: "token",
+      value: token,
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "lax",
       maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: "/",
     });
 
     return response;
   } catch (error) {
-    return NextResponse.json({ error: "Error logging in" }, { status: 500 });
+    console.error("Login error:", error);
+    return NextResponse.json(
+      { success: false, error: "An error occurred during login" },
+      { status: 500 }
+    );
   }
 }

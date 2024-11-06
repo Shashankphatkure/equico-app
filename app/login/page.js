@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRightIcon } from "@heroicons/react/24/solid";
@@ -12,28 +12,57 @@ export default function Login() {
     password: "",
   });
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const justRegistered = searchParams.get("registered") === "true";
+  const redirectTo = searchParams.get("from") || "/dashboard";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError("");
+
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(formData),
+        credentials: "include",
       });
 
-      if (res.ok) {
+      const data = await res.json();
+
+      if (data.success) {
+        // Store user data
+        if (data.user) {
+          localStorage.setItem("user", JSON.stringify(data.user));
+        }
+
+        // Force a hard navigation to dashboard
         router.push("/dashboard");
+        router.refresh();
       } else {
-        const data = await res.json();
-        setError(data.error || "Invalid credentials");
+        setError(data.error || "Failed to login");
       }
     } catch (err) {
-      setError("Something went wrong");
+      console.error("Login error:", err);
+      setError("An error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const token = document.cookie.includes("token=");
+    const user = localStorage.getItem("user");
+
+    if (token && user) {
+      router.push("/dashboard");
+    }
+  }, [router]);
 
   return (
     <div className="min-h-screen bg-white relative overflow-hidden">
@@ -149,10 +178,17 @@ export default function Login() {
 
               <button
                 type="submit"
-                className="flex w-full justify-center items-center gap-2 rounded-lg bg-gray-900 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E2FF3F] transition-all duration-300"
+                disabled={isLoading}
+                className="flex w-full justify-center items-center gap-2 rounded-lg bg-gray-900 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E2FF3F] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Sign in
-                <ArrowRightIcon className="w-4 h-4" />
+                {isLoading ? (
+                  "Signing in..."
+                ) : (
+                  <>
+                    Sign in
+                    <ArrowRightIcon className="w-4 h-4" />
+                  </>
+                )}
               </button>
             </form>
 
