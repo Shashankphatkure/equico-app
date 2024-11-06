@@ -18,18 +18,22 @@ model User {
   profileImage  String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  
+  // Relations
   posts         Post[]
   comments      Comment[]
   likes         Like[]
   horses        Horse[]
-  events        Event[]
-  messages      Message[]
   tacksForSale  TackShop[]
-  followers   Follow[]  @relation("followers")
-  following   Follow[]  @relation("following")
+  followers     Follow[]    @relation("followers")
+  following     Follow[]    @relation("following")
   sentMessages     Message[] @relation("sentMessages")
   receivedMessages Message[] @relation("receivedMessages")
   savedListings    SavedListing[]
+  reviews         Review[]
+  disputes        Dispute[]
+  notifications   Notification[]
+  notificationsSent Notification[] @relation("notificationFrom")
 }
 
 model Horse {
@@ -40,7 +44,8 @@ model Horse {
   owner       User      @relation(fields: [ownerId], references: [id])
   ownerId     String
   medicalRecords MedicalRecord[]
-  trainingLogs   TrainingLog[]
+  appointments   Appointment[]
+  posts       Post[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
@@ -57,6 +62,7 @@ model Post {
   horse       Horse?    @relation(fields: [horseId], references: [id])
   horseId     String?
   isPublic    Boolean   @default(true)
+  notifications Notification[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
@@ -154,6 +160,10 @@ model Listing {
   isBoosted   Boolean   @default(false)
   views       Int       @default(0)
   savedBy     SavedListing[]
+  messages    Message[]
+  reviews     Review[]
+  disputes    Dispute[]
+  notifications Notification[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
@@ -227,18 +237,4 @@ model Dispute {
   resolution  String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-}
-
-// Add to User model
-model User {
-  // ... existing fields
-  reviews     Review[]
-  disputes    Dispute[]
-}
-
-// Add to Listing model
-model Listing {
-  // ... existing fields
-  reviews     Review[]
-  disputes    Dispute[]
 }
