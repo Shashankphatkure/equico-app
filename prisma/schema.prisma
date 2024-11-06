@@ -180,3 +180,64 @@ model Message {
   isRead    Boolean   @default(false)
   createdAt DateTime  @default(now())
 }
+
+model Notification {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  type        String    // message, like, comment, follow, etc.
+  content     String
+  link        String?
+  isRead      Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  
+  // Optional relations
+  fromUser    User?     @relation("notificationFrom", fields: [fromUserId], references: [id])
+  fromUserId  String?
+  post        Post?     @relation(fields: [postId], references: [id])
+  postId      String?
+  listing     Listing?  @relation(fields: [listingId], references: [id])
+  listingId   String?
+}
+
+
+// Add to schema.prisma
+
+model Review {
+  id          String    @id @default(cuid())
+  rating      Int
+  comment     String?
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+  listing     Listing   @relation(fields: [listingId], references: [id])
+  listingId   String
+  createdAt   DateTime  @default(now())
+}
+
+model Dispute {
+  id          String    @id @default(cuid())
+  reason      String
+  description String
+  status      String    // open, resolved, closed
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+  listing     Listing   @relation(fields: [listingId], references: [id])
+  listingId   String
+  resolution  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// Add to User model
+model User {
+  // ... existing fields
+  reviews     Review[]
+  disputes    Dispute[]
+}
+
+// Add to Listing model
+model Listing {
+  // ... existing fields
+  reviews     Review[]
+  disputes    Dispute[]
+}
